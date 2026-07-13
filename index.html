@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Test2 — Virtual Tour</title>
+<style>
+  :root { color-scheme: dark; }
+  html,body { margin:0; height:100%; background:#0b0b0d; color:#eee; font-family: system-ui, sans-serif; overflow:hidden; }
+  #app { position:fixed; inset:0; }
+  #hud { position:fixed; left:12px; top:12px; background:rgba(0,0,0,.5); font-size:12px; padding:6px 10px; border-radius:6px; pointer-events:none; }
+  #err { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:24px; text-align:center; }
+  .hs { position:fixed; transform:translate(-50%,-50%); width:28px; height:28px; border-radius:50%; border:2px solid #fff; background:rgba(30,120,220,.92); color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
+  #wp-bar { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:8px; flex-wrap:wrap; max-width:92%; justify-content:center; }
+  #wp-bar button { background:rgba(255,255,255,.92); border:none; border-radius:999px; padding:8px 14px; font-size:13px; cursor:pointer; }
+  #joy { position:fixed; left:24px; bottom:24px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); display:none; touch-action:none; }
+  #joy .knob { position:absolute; left:50%; top:50%; width:48px; height:48px; margin:-24px 0 0 -24px; border-radius:50%; background:rgba(255,255,255,.85); }
+  #modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.6); }
+  #modal .box { background:#17171b; border-radius:12px; max-width:560px; width:92%; max-height:82%; overflow:auto; padding:18px; }
+  #modal h3 { margin:0 0 10px; }
+  #modal img, #modal video, #modal iframe { width:100%; border:0; border-radius:8px; display:block; margin:8px 0; }
+  #modal .close { float:right; background:none; border:none; color:#aaa; font-size:22px; cursor:pointer; }
+  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud"></div>
+<div id="loading">Loading tour…</div>
+<div id="err"><div><h2>Could not load the tour</h2><p id="err-msg"></p></div></div>
+<div id="wp-bar"></div>
+<div id="joy"><div class="knob"></div></div>
+<div id="modal"><div class="box"><button class="close" onclick="document.getElementById('modal').style.display='none'">×</button><h3 id="modal-title"></h3><div id="modal-body"></div></div></div>
+
+<script>window.__TOUR__ = {"name":"Test2","config":{"version":1,"splatTransform":{"rotation":[1,0,0,0],"position":[-0.541724505256417,2.0616150443778705,-1.359653566516576],"scale":0.26423014100156417},"floorY":0,"camera":{"mode":"flat","flatHeight":1.6,"heightEditable":false,"droneMinHeight":0.5,"droneMaxHeight":20,"fov":60,"moveSpeed":2.5,"lookSpeed":0.0025,"near":0.01,"far":1000},"navigation":{"mode":"joystick"},"boundary":{"polygon":[[4.129519795399352,3.722296800238567],[0.3048288295916254,4.2672962365818705],[0.11115255801370824,1.7296133240796872],[-3.842599319851429,2.089613113461043],[-3.7164974638771406,-5.619371670945776],[5.2533688553858795,-5.773328616616652],[6.442353096669857,4.361579127472014]],"showWalls":true,"wallHeight":3},"start":{"position":[0,1.6,7.199999999999999],"yaw":3.141592653589793,"pitch":0},"waypoints":[{"id":"xHfTltv3","name":"Waypoint 1","position":[2.055727931325553,0,0.9210624566254313],"order":0}],"hotspots":[],"ui":{"theme":"dark","showMinimap":false}},"splatUrl":"https://virtual-tour-gaussian.s3.ap-south-1.amazonaws.com/projects/f0d21138-5ddc-423c-8ae9-5e41dd616b06/assets/b6b16867-247c-41a6-a8de-3d92950c91fd.ply?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAQOBTBRPX23YHYSUC%2F20260713%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260713T062452Z&X-Amz-Expires=3600&X-Amz-Signature=c01234b9a207b648b7879c97d9c8dd79b0979522c786dc9da39e87868e284e64&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject","assetUrls":{"535ce503-34d0-440b-b8a1-fabdfd5e6cfb":"https://virtual-tour-gaussian.s3.ap-south-1.amazonaws.com/projects/f0d21138-5ddc-423c-8ae9-5e41dd616b06/assets/b6b16867-247c-41a6-a8de-3d92950c91fd.ply?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAQOBTBRPX23YHYSUC%2F20260713%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260713T062452Z&X-Amz-Expires=3600&X-Amz-Signature=c01234b9a207b648b7879c97d9c8dd79b0979522c786dc9da39e87868e284e64&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"}};</script>
+<script type="module">
+import * as THREE from 'https://esm.sh/three@0.160.1';
+import * as GS from 'https://esm.sh/@mkkellogg/gaussian-splats-3d@0.4.7?alias=three:three@0.160.1&deps=three@0.160.1';
+
+var TOUR = window.__TOUR__;
+var cfg = TOUR.config;
+var hud = document.getElementById('hud');
+var loadingEl = document.getElementById('loading');
+
+function fail(m){ document.getElementById('loading').style.display='none'; document.getElementById('err').style.display='flex'; document.getElementById('err-msg').textContent = m; }
+if (!TOUR.splatUrl) { fail('This tour has no renderable splat (asset not ready).'); }
+
+function pointInPolygon(x, z, poly){
+  if (!poly || poly.length < 3) return true;
+  var inside = false, j = poly.length - 1;
+  for (var i = 0; i < poly.length; j = i++){
+    var xi = poly[i][0], zi = poly[i][1], xj = poly[j][0], zj = poly[j][1];
+    var hit = ((zi > z) !== (zj > z)) && (x < (xj - xi) * (z - zi) / (zj - zi) + xi);
+    if (hit) inside = !inside;
+  }
+  return inside;
+}
+function ease(t){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function clampPitch(p){ return Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, p)); }
+function lerpAngle(a,b,t){ var d=b-a; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2; return a+d*t; }
+
+var container = document.getElementById('app');
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+container.appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(cfg.camera.fov, window.innerWidth/window.innerHeight, cfg.camera.near, cfg.camera.far);
+
+var viewer = new GS.Viewer({
+  selfDrivenMode: false,
+  useBuiltInControls: false,
+  renderer: renderer,
+  camera: camera,
+  threeScene: scene,
+  sharedMemoryForWorkers: false
+});
+
+var st = {
+  yaw: cfg.start.yaw || 0,
+  pitch: cfg.start.pitch || 0,
+  pos: new THREE.Vector3(cfg.start.position[0], cfg.start.position[1], cfg.start.position[2]),
+  keys: {}, dragging:false, lastX:0, lastY:0, tween:null, joy:{x:0,y:0}
+};
+if (cfg.camera.mode === 'flat') st.pos.y = cfg.camera.flatHeight;
+
+var boundary = cfg.boundary.polygon || [];
+function applyMove(nx, nz){
+  if (pointInPolygon(nx, nz, boundary)) { st.pos.x = nx; st.pos.z = nz; }
+}
+
+// ---- waypoints (discs + glow) ----
+var discs = [];
+var raycaster = new THREE.Raycaster();
+function addWaypointDiscs(){
+  (cfg.waypoints || []).forEach(function(wp){
+    var y = (cfg.floorY || 0) + 0.02;
+    var geo = new THREE.CircleGeometry(0.45, 40);
+    var mat = new THREE.MeshBasicMaterial({ color: 0x38a0ff, transparent:true, opacity:0.55, side: THREE.DoubleSide });
+    var disc = new THREE.Mesh(geo, mat);
+    disc.rotation.x = -Math.PI/2;
+    disc.position.set(wp.position[0], y, wp.position[2]);
+    disc.userData.wp = wp;
+    scene.add(disc);
+    discs.push(disc);
+    // soft rising glow
+    var gmat = new THREE.SpriteMaterial({ color: 0x66c2ff, transparent:true, opacity:0.35, depthWrite:false });
+    var sp = new THREE.Sprite(gmat);
+    sp.scale.set(0.9, 1.6, 1);
+    sp.position.set(wp.position[0], y + 0.8, wp.position[2]);
+    scene.add(sp);
+  });
+}
+
+function goToWaypoint(wp){
+  var to = new THREE.Vector3(wp.position[0], cfg.camera.mode==='flat'?cfg.camera.flatHeight:wp.position[1], wp.position[2]);
+  var toYaw = st.yaw, toPitch = st.pitch;
+  if (wp.look){
+    var dir = new THREE.Vector3(wp.look[0]-to.x, wp.look[1]-to.y, wp.look[2]-to.z);
+    toYaw = Math.atan2(dir.x, dir.z);
+    toPitch = clampPitch(Math.atan2(dir.y, Math.hypot(dir.x, dir.z)));
+  }
+  st.tween = { from: st.pos.clone(), to: to, fromYaw: st.yaw, toYaw: toYaw, fromPitch: st.pitch, toPitch: toPitch, start: performance.now(), duration: 900 };
+}
+
+// waypoint bar (also works as fallback nav)
+var wpBar = document.getElementById('wp-bar');
+if (cfg.navigation.mode === 'waypoint'){
+  (cfg.waypoints || []).forEach(function(wp){
+    var b = document.createElement('button');
+    b.textContent = wp.name || 'Waypoint';
+    b.onclick = function(){ goToWaypoint(wp); };
+    wpBar.appendChild(b);
+  });
+}
+
+// ---- hotspots (DOM markers) ----
+var hotspotEls = [];
+(cfg.hotspots || []).forEach(function(hs){
+  var el = document.createElement('div');
+  el.className = 'hs';
+  el.textContent = 'i';
+  el.title = hs.title || 'Info';
+  el.onclick = function(){ openHotspot(hs); };
+  document.body.appendChild(el);
+  hotspotEls.push({ el: el, hs: hs, v: new THREE.Vector3(hs.position[0], hs.position[1], hs.position[2]) });
+});
+
+function openHotspot(hs){
+  document.getElementById('modal-title').textContent = hs.title || 'Info';
+  var body = document.getElementById('modal-body');
+  body.innerHTML = '';
+  (hs.content.blocks || []).forEach(function(b){
+    if (b.type === 'text'){ var p=document.createElement('p'); p.textContent=b.text||''; body.appendChild(p); }
+    else if (b.type === 'image'){ var im=document.createElement('img'); im.src = b.assetId ? (TOUR.assetUrls[b.assetId]||'') : (b.url||''); im.alt=b.alt||''; body.appendChild(im); }
+    else if (b.type === 'video'){ var v=document.createElement('video'); v.controls=true; v.src = b.assetId ? (TOUR.assetUrls[b.assetId]||'') : (b.url||''); body.appendChild(v); }
+    else if (b.type === 'youtube'){ var f=document.createElement('iframe'); f.height='315'; f.allowFullscreen=true; f.src='https://www.youtube.com/embed/'+b.videoId; body.appendChild(f); }
+  });
+  document.getElementById('modal').style.display='flex';
+}
+
+// ---- input ----
+renderer.domElement.addEventListener('pointerdown', function(e){
+  // waypoint pick
+  if (cfg.navigation.mode === 'waypoint' && discs.length){
+    var rect = renderer.domElement.getBoundingClientRect();
+    var mouse = new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1, -((e.clientY-rect.top)/rect.height)*2+1);
+    raycaster.setFromCamera(mouse, camera);
+    var hit = raycaster.intersectObjects(discs);
+    if (hit.length){ goToWaypoint(hit[0].object.userData.wp); return; }
+  }
+  st.dragging = true; st.lastX = e.clientX; st.lastY = e.clientY;
+});
+window.addEventListener('pointerup', function(){ st.dragging=false; });
+window.addEventListener('pointermove', function(e){
+  if (!st.dragging) return;
+  st.tween = null;
+  var dx = e.clientX-st.lastX, dy = e.clientY-st.lastY;
+  st.lastX = e.clientX; st.lastY = e.clientY;
+  st.yaw -= dx * cfg.camera.lookSpeed;
+  st.pitch = clampPitch(st.pitch - dy * cfg.camera.lookSpeed);
+});
+window.addEventListener('keydown', function(e){ st.keys[e.code]=true; });
+window.addEventListener('keyup', function(e){ st.keys[e.code]=false; });
+window.addEventListener('resize', function(){
+  camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ---- joystick ----
+if (cfg.navigation.mode === 'joystick'){
+  var joy = document.getElementById('joy');
+  joy.style.display = 'block';
+  var knob = joy.querySelector('.knob');
+  var active = false, cx=0, cy=0, R=60;
+  function setKnob(dx,dy){ knob.style.transform='translate('+dx+'px,'+dy+'px)'; }
+  joy.addEventListener('pointerdown', function(e){ active=true; var r=joy.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; joy.setPointerCapture(e.pointerId); });
+  joy.addEventListener('pointermove', function(e){
+    if(!active) return;
+    var dx=e.clientX-cx, dy=e.clientY-cy; var d=Math.hypot(dx,dy); if(d>R){ dx=dx/d*R; dy=dy/d*R; }
+    setKnob(dx,dy); st.joy.x = dx/R; st.joy.y = dy/R;
+  });
+  function endJoy(){ active=false; setKnob(0,0); st.joy.x=0; st.joy.y=0; }
+  joy.addEventListener('pointerup', endJoy);
+  joy.addEventListener('pointercancel', endJoy);
+}
+
+// ---- load splat + start loop ----
+if (TOUR.splatUrl){
+  var t = cfg.splatTransform || { rotation:[1,0,0,0], position:[0,0,0], scale:1 };
+  viewer.addSplatScene(TOUR.splatUrl, {
+    showLoadingUI: true,
+    rotation: t.rotation,
+    position: t.position,
+    scale: [t.scale, t.scale, t.scale]
+  }).then(function(){
+    addWaypointDiscs();
+    loadingEl.style.display='none';
+    requestAnimationFrame(loop);
+  }).catch(function(e){ fail('Failed to load splat: ' + (e && e.message ? e.message : e)); });
+}
+
+var lastT = performance.now();
+function loop(){
+  var now = performance.now();
+  var dt = Math.min(0.05, (now-lastT)/1000); lastT = now;
+
+  if (st.tween){
+    var tw = st.tween; var raw = Math.min(1,(now-tw.start)/tw.duration); var tt = ease(raw);
+    var p = tw.from.clone().lerp(tw.to, tt);
+    applyMove(p.x, p.z);
+    if (cfg.camera.mode==='drone') st.pos.y = p.y;
+    st.yaw = lerpAngle(tw.fromYaw, tw.toYaw, tt);
+    st.pitch = tw.fromPitch + (tw.toPitch-tw.fromPitch)*tt;
+    if (raw>=1) st.tween=null;
+  } else {
+    var fwd = new THREE.Vector3(Math.sin(st.yaw),0,Math.cos(st.yaw));
+    var right = new THREE.Vector3(fwd.z,0,-fwd.x);
+    var mv = new THREE.Vector3();
+    if (st.keys['KeyW']) mv.add(fwd);
+    if (st.keys['KeyS']) mv.sub(fwd);
+    if (st.keys['KeyD']) mv.add(right);
+    if (st.keys['KeyA']) mv.sub(right);
+    if (st.joy.x || st.joy.y){ mv.add(right.clone().multiplyScalar(st.joy.x)); mv.add(fwd.clone().multiplyScalar(-st.joy.y)); }
+    if (mv.lengthSq()>0){ mv.normalize().multiplyScalar(cfg.camera.moveSpeed*dt); applyMove(st.pos.x+mv.x, st.pos.z+mv.z); }
+    if (cfg.camera.mode==='drone'){
+      if (st.keys['KeyQ']) st.pos.y += cfg.camera.moveSpeed*dt;
+      if (st.keys['KeyE']) st.pos.y -= cfg.camera.moveSpeed*dt;
+      st.pos.y = Math.max(cfg.camera.droneMinHeight, Math.min(cfg.camera.droneMaxHeight, st.pos.y));
+    } else {
+      if (cfg.camera.heightEditable){
+        if (st.keys['KeyQ']) st.pos.y += cfg.camera.moveSpeed*dt;
+        if (st.keys['KeyE']) st.pos.y = Math.max(0.2, st.pos.y - cfg.camera.moveSpeed*dt);
+      } else { st.pos.y = cfg.camera.flatHeight; }
+    }
+  }
+
+  camera.position.copy(st.pos);
+  var dir = new THREE.Vector3(Math.sin(st.yaw)*Math.cos(st.pitch), Math.sin(st.pitch), Math.cos(st.yaw)*Math.cos(st.pitch));
+  camera.lookAt(st.pos.clone().add(dir));
+
+  // project hotspots
+  for (var i=0;i<hotspotEls.length;i++){
+    var h = hotspotEls[i]; var v = h.v.clone().project(camera);
+    var behind = v.z > 1;
+    if (behind || v.x < -1 || v.x > 1 || v.y < -1 || v.y > 1){ h.el.style.display='none'; }
+    else { h.el.style.display='flex'; h.el.style.left = ((v.x*0.5+0.5)*window.innerWidth)+'px'; h.el.style.top = ((-v.y*0.5+0.5)*window.innerHeight)+'px'; }
+  }
+
+  viewer.update();
+  viewer.render();
+  hud.textContent = 'Drag to look · WASD to move' + (cfg.navigation.mode==='joystick' ? ' · joystick' : ' · click a waypoint');
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
